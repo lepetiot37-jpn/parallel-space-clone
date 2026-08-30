@@ -9,7 +9,7 @@ source.include_exts = py,png,jpg,kv,atlas,xml,json
 
 version = 0.1.0
 
-requirements = python3,kivy==2.3.0,pyjnius,plyer,pillow,android
+requirements = python3==3.11.9,kivy==2.3.0,pyjnius,plyer,pillow,android
 
 # Icône / écran de démarrage (facultatif : ajoutez vos fichiers dans assets/)
 icon.filename = %(source.dir)s/assets/default_icon.png
