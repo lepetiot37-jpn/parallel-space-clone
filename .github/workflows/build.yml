@@ -44,6 +44,9 @@ jobs:
             buildozer-${{ runner.os }}-
 
       - name: Compiler l'APK (debug)
+        env:
+          CFLAGS: "-Wno-error=incompatible-function-pointer-types -Wno-error=implicit-function-declaration -Wno-error=int-conversion"
+          CXXFLAGS: "-Wno-error=incompatible-function-pointer-types -Wno-error=implicit-function-declaration -Wno-error=int-conversion"
         run: |
           yes | buildozer -v android debug
 
