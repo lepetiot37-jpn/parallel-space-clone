@@ -1,0 +1,7 @@
+.buildozer/
+bin/
+*.pyc
+__pycache__/
+.venv/
+*.apk
+.DS_Store

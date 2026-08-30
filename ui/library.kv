@@ -1,0 +1,60 @@
+#:import COLORS main.COLORS
+#:import dp kivy.metrics.dp
+
+<LibraryScreen>:
+    name: "library"
+
+    BoxLayout:
+        orientation: "vertical"
+
+        # --- Barre supérieure ---
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            padding: dp(12), dp(6)
+            spacing: dp(10)
+            canvas.before:
+                Color:
+                    rgba: COLORS["surface"]
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            Label:
+                text: "Parallel Space"
+                bold: True
+                font_size: "18sp"
+                color: COLORS["text"]
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
+
+            Button:
+                text: "+ Importer un APK"
+                size_hint_x: None
+                width: dp(180)
+                background_normal: ""
+                background_color: COLORS["accent"]
+                color: COLORS["text"]
+                on_release: root.import_apk()
+
+        # --- Grille des applications ---
+        ScrollView:
+            do_scroll_x: False
+
+            GridLayout:
+                id: apps_grid
+                cols: 2
+                spacing: dp(12)
+                padding: dp(12)
+                size_hint_y: None
+                height: self.minimum_height
+                row_default_height: dp(190)
+                row_force_default: True
+
+                canvas.before:
+                    Color:
+                        rgba: COLORS["bg"]
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
