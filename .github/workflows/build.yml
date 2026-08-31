@@ -30,6 +30,7 @@ jobs:
         run: |
           yes | docker run --rm -i \
             -v "${{ github.workspace }}":/home/user/hostcwd \
+            -e PIP_CONSTRAINT=/home/user/hostcwd/pip-constraint.txt \
             ghcr.io/kivy/buildozer:latest \
             android debug
 
