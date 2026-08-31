@@ -39,6 +39,8 @@ android.gradle_dependencies = androidx.core:core:1.12.0
 # Hook exécuté par python-for-android avant la compilation de l'APK :
 # il injecte le <provider> FileProvider nécessaire à l'installation
 # d'APK sur Android 7+ (voir hooks.py).
+p4a.local_recipes = %(source.dir)s/p4a-local-recipes
+
 p4a.hook = %(source.dir)s/hooks.py
 
 android.allow_backup = True
