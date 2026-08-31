@@ -17,7 +17,6 @@ icon.filename = %(source.dir)s/assets/default_icon.png
 orientation = portrait
 fullscreen = 0
 
-[android]
 
 # API cible / minimale
 android.api = 34
