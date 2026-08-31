@@ -23,6 +23,9 @@ jobs:
           restore-keys: |
             buildozer-docker-${{ runner.os }}-
 
+      - name: Nettoyer le venv de build residuel
+        run: rm -rf .buildozer/android/platform/build-*/build/venv
+
       - name: Compiler l'APK (debug) dans l'image Docker officielle Kivy
         run: |
           yes | docker run --rm -i \
