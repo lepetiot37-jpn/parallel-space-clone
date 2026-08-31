@@ -18,22 +18,27 @@ jobs:
       - name: Mettre en cache les téléchargements Buildozer / SDK / NDK
         uses: actions/cache@v4
         with:
-          path: |
-            .buildozer
-          key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+          path: .buildozer
+          key: buildozer-docker-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
           restore-keys: |
-            buildozer-${{ runner.os }}-
+            buildozer-docker-${{ runner.os }}-
 
-      - name: Compiler l'APK (debug) via conteneur buildozer maintenu
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
-        with:
-          command: buildozer android debug
-          buildozer_version: stable
+      - name: Compiler l'APK (debug) dans l'image Docker officielle Kivy
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}":/home/user/hostcwd \
+            ghcr.io/kivy/buildozer:latest \
+            android debug
+
+      - name: Récupérer le nom de l'APK généré
+        id: apk
+        run: |
+          APK_PATH=$(find bin -name "*.apk" | head -n 1)
+          echo "path=$APK_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Publier l'APK en tant qu'artefact du workflow
         uses: actions/upload-artifact@v4
         with:
           name: parallel-space-clone-debug-apk
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
