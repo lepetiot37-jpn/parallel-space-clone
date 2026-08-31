@@ -25,7 +25,7 @@ jobs:
 
       - name: Compiler l'APK (debug) dans l'image Docker officielle Kivy
         run: |
-          docker run --rm \
+          yes | docker run --rm -i \
             -v "${{ github.workspace }}":/home/user/hostcwd \
             ghcr.io/kivy/buildozer:latest \
             android debug
