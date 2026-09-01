@@ -53,13 +53,28 @@ COLORS = {
 
 
 def notify(title, message):
-    """Popup simple pour retour utilisateur (succès / erreur)."""
+    """Popup simple pour retour utilisateur (succès / erreur / traceback)."""
+    from kivy.uix.scrollview import ScrollView
+
     content = BoxLayout(orientation="vertical", padding=16, spacing=10)
-    content.add_widget(Label(text=message, color=COLORS["text"]))
+    label = Label(
+        text=message,
+        color=COLORS["text"],
+        size_hint_y=None,
+        halign="left",
+        valign="top",
+        font_size="12sp",
+    )
+    label.bind(width=lambda *_: setattr(label, "text_size", (label.width, None)))
+    label.bind(texture_size=lambda *_: setattr(label, "height", label.texture_size[1]))
+    scroll = ScrollView()
+    scroll.add_widget(label)
+    content.add_widget(scroll)
+
     popup = Popup(
         title=title,
         content=content,
-        size_hint=(0.85, 0.35),
+        size_hint=(0.9, 0.6),
         separator_color=COLORS["accent"],
     )
     popup.open()
@@ -151,7 +166,13 @@ class LibraryScreen(Screen):
         app = App.get_running_app()
         app.apk_manager.pick_apk_file(self.on_apk_picked)
 
-    def on_apk_picked(self, apk_path):
+    def on_apk_picked(self, apk_path, error=None):
+        if error:
+            # Popup avec le détail technique complet (affiché en <300
+            # caractères pour rester lisible, le reste comptera pour le
+            # debug si besoin de zoomer/scroller dans le popup).
+            notify("Erreur import APK", error[:600])
+            return
         if not apk_path:
             return
         app = App.get_running_app()

@@ -37,23 +37,33 @@ class ApkManager:
     # ------------------------------------------------------------------
     def pick_apk_file(self, callback):
         """Ouvre le sélecteur de fichiers officiel Android (SAF) filtré sur
-        les APK. `callback(local_path_or_None)` est appelé avec le chemin
-        d'une copie locale (nécessaire car l'URI SAF n'est pas un chemin
-        de fichier classique).
+        les APK. `callback(local_path_or_None, error=None)` est appelé avec
+        le chemin d'une copie locale (nécessaire car l'URI SAF n'est pas un
+        chemin de fichier classique), ou un message d'erreur explicite si
+        quelque chose a échoué (au lieu d'échouer silencieusement).
         """
+        import traceback
+
         try:
             from plyer import filechooser
         except Exception:
-            callback(None)
+            callback(None, error="import plyer.filechooser:\n" + traceback.format_exc())
             return
 
         def _on_selection(selection):
             if not selection:
-                callback(None)
+                callback(None, error=None)
                 return
             source = selection[0]
-            local_path = self._materialize_apk(source)
-            callback(local_path)
+            try:
+                local_path = self._materialize_apk(source)
+            except Exception:
+                callback(None, error="_materialize_apk:\n" + traceback.format_exc())
+                return
+            if local_path is None:
+                callback(None, error=f"Copie du fichier échouée pour: {source}")
+                return
+            callback(local_path, error=None)
 
         try:
             filechooser.open_file(
@@ -61,7 +71,7 @@ class ApkManager:
                 filters=[["APK", "*.apk"]],
             )
         except Exception:
-            callback(None)
+            callback(None, error="filechooser.open_file:\n" + traceback.format_exc())
 
     def _materialize_apk(self, source_uri_or_path):
         """Copie le fichier sélectionné (souvent un content:// URI sur
