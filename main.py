@@ -29,6 +29,7 @@ from kivy.animation import Animation
 from kivy.uix.popup import Popup
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
+from kivy.uix.behaviors import ButtonBehavior
 
 from core.storage import LibraryStorage
 from core.apk_manager import ApkManager
@@ -37,26 +38,34 @@ from core.permissions import ensure_runtime_permissions, open_install_unknown_ap
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ---------------------------------------------------------------------------
-# Thème sombre global
+# Thème clair (proche de l'app Parallel Space originale)
 # ---------------------------------------------------------------------------
-Window.clearcolor = (0.07, 0.07, 0.09, 1)
+Window.clearcolor = (0.97, 0.97, 0.98, 1)
 
 COLORS = {
-    "bg": (0.07, 0.07, 0.09, 1),
-    "surface": (0.12, 0.12, 0.15, 1),
-    "surface_light": (0.17, 0.17, 0.21, 1),
-    "accent": (0.35, 0.55, 1, 1),
-    "text": (0.92, 0.92, 0.95, 1),
-    "text_dim": (0.6, 0.6, 0.65, 1),
-    "danger": (0.9, 0.3, 0.3, 1),
+    "bg": (0.97, 0.97, 0.98, 1),
+    "surface": (1, 1, 1, 1),
+    "surface_light": (0.90, 0.90, 0.93, 1),
+    "header": (0.31, 0.38, 0.55, 1),
+    "accent": (0.25, 0.45, 0.95, 1),
+    "text": (0.12, 0.12, 0.14, 1),
+    "text_on_header": (1, 1, 1, 1),
+    "text_dim": (0.45, 0.45, 0.5, 1),
+    "danger": (0.85, 0.25, 0.25, 1),
 }
 
 
 def notify(title, message):
     """Popup simple pour retour utilisateur (succès / erreur / traceback)."""
     from kivy.uix.scrollview import ScrollView
+    from kivy.graphics import Color, Rectangle
 
     content = BoxLayout(orientation="vertical", padding=16, spacing=10)
+    with content.canvas.before:
+        Color(*COLORS["surface"])
+        rect = Rectangle(pos=content.pos, size=content.size)
+    content.bind(pos=lambda *_: setattr(rect, "pos", content.pos))
+    content.bind(size=lambda *_: setattr(rect, "size", content.size))
     label = Label(
         text=message,
         color=COLORS["text"],
@@ -86,8 +95,8 @@ def _make_button(text, color):
     return Button(text=text, background_normal="", background_color=color, color=COLORS["text"])
 
 
-class AppCardWidget(BoxLayout):
-    """Représente une application importée dans la grille."""
+class AppCardWidget(ButtonBehavior, BoxLayout):
+    """Représente une application (installée ou importée) dans la grille."""
     app_name = StringProperty("")
     package_name = StringProperty("")
     version_name = StringProperty("")
@@ -98,6 +107,19 @@ class AppCardWidget(BoxLayout):
         anim = Animation(opacity=0.6, duration=0.08) + Animation(opacity=1, duration=0.12)
         anim.start(self)
 
+    def on_release(self, *_args):
+        """Tap sur la carte entière : ouvre si installée, sinon installe."""
+        screen = App.get_running_app().root.get_screen("library")
+        if self.installed:
+            screen.open_app(self.package_name)
+        else:
+            screen.install_app(self.package_name)
+
+
+class AddAppCardWidget(ButtonBehavior, BoxLayout):
+    """Tuile finale de la grille : \u00ab Ajouter une App \u00bb (import APK)."""
+    pass
+
 
 class LibraryScreen(Screen):
     apps = ListProperty([])
@@ -107,11 +129,26 @@ class LibraryScreen(Screen):
 
     def refresh_apps(self):
         app = App.get_running_app()
-        entries = app.storage.get_all()
-        # Met à jour le statut "installé" via PackageManager officiel.
-        for entry in entries:
-            entry["installed"] = app.apk_manager.is_package_installed(entry["package_name"])
-        self.apps = entries
+
+        # 1) Toutes les applications déjà installées sur l'appareil
+        #    (PackageManager), comme dans l'app Parallel Space originale.
+        by_package = {}
+        for entry in app.apk_manager.list_installed_apps():
+            by_package[entry["package_name"]] = entry
+
+        # 2) Les APK importés manuellement : s'ils sont déjà installés, on
+        #    garde le nom personnalisé éventuel (renommage) ; sinon on les
+        #    affiche avec le bouton "Installer".
+        for stored in app.storage.get_all():
+            pkg = stored["package_name"]
+            if pkg in by_package:
+                by_package[pkg]["name"] = stored.get("name") or by_package[pkg]["name"]
+                by_package[pkg]["apk_path"] = stored.get("apk_path")
+            else:
+                stored["installed"] = False
+                by_package[pkg] = stored
+
+        self.apps = sorted(by_package.values(), key=lambda e: e.get("name", "").lower())
 
     def on_apps(self, _instance, entries):
         """Reconstruit la grille à chaque mise à jour de la bibliothèque."""
@@ -128,6 +165,10 @@ class LibraryScreen(Screen):
                 installed=entry.get("installed", False),
             )
             grid.add_widget(card)
+        # Tuile finale "Ajouter une App", toujours en dernier dans la grille.
+        add_tile = AddAppCardWidget()
+        add_tile.bind(on_release=lambda *_a: self.import_apk())
+        grid.add_widget(add_tile)
 
     def open_options(self, package_name, current_name):
         """Popup officiel Kivy (pas Android) pour renommer / supprimer."""

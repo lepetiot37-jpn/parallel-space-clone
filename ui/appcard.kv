@@ -3,68 +3,33 @@
 <AppCardWidget>:
     orientation: "vertical"
     size_hint_y: None
-    height: dp(190)
-    padding: dp(10)
-    spacing: dp(6)
-    canvas.before:
-        Color:
-            rgba: COLORS["surface"]
-        RoundedRectangle:
-            pos: self.pos
-            size: self.size
-            radius: [dp(16)]
+    height: dp(96)
+    padding: dp(6)
+    spacing: dp(4)
 
     Image:
         id: icon
         source: root.icon_path if root.icon_path else "assets/default_icon.png"
         size_hint_y: None
-        height: dp(72)
+        height: dp(56)
         allow_stretch: True
         keep_ratio: True
+        canvas.before:
+            Color:
+                rgba: COLORS["surface_light"]
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [dp(14)]
 
     Label:
         text: root.app_name
         color: COLORS["text"]
-        bold: True
-        font_size: "14sp"
+        font_size: "12sp"
         size_hint_y: None
-        height: dp(20)
+        height: dp(30)
         shorten: True
         shorten_from: "right"
         halign: "center"
-        valign: "middle"
+        valign: "top"
         text_size: self.size
-
-    Label:
-        text: "v" + root.version_name if root.version_name else ""
-        color: COLORS["text_dim"]
-        font_size: "11sp"
-        size_hint_y: None
-        height: dp(16)
-        halign: "center"
-        valign: "middle"
-        text_size: self.size
-
-    BoxLayout:
-        size_hint_y: None
-        height: dp(34)
-        spacing: dp(6)
-
-        Button:
-            text: "Ouvrir" if root.installed else "Installer"
-            background_normal: ""
-            background_color: COLORS["accent"] if root.installed else COLORS["surface_light"]
-            color: COLORS["text"]
-            font_size: "12sp"
-            on_release:
-                root.animate_press()
-                app.root.get_screen("library").open_app(root.package_name) if root.installed else app.root.get_screen("library").install_app(root.package_name)
-
-        Button:
-            text: "..."
-            size_hint_x: None
-            width: dp(36)
-            background_normal: ""
-            background_color: COLORS["surface_light"]
-            color: COLORS["text"]
-            on_release: app.root.get_screen("library").open_options(root.package_name, root.app_name)

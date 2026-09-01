@@ -1,21 +1,62 @@
 #:import COLORS main.COLORS
 #:import dp kivy.metrics.dp
 
+<AddAppCardWidget>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: dp(96)
+    padding: dp(6)
+    spacing: dp(4)
+
+    BoxLayout:
+        size_hint_y: None
+        height: dp(56)
+        canvas.before:
+            Color:
+                rgba: COLORS["accent"]
+            Line:
+                dash_length: dp(5)
+                dash_offset: dp(3)
+                width: 1.4
+                rounded_rectangle: [self.x, self.y, self.width, self.height, dp(14)]
+        Label:
+            text: "+"
+            color: COLORS["accent"]
+            font_size: "26sp"
+            bold: True
+
+    Label:
+        text: "Ajouter une App"
+        color: COLORS["text_dim"]
+        font_size: "11sp"
+        size_hint_y: None
+        height: dp(30)
+        halign: "center"
+        valign: "top"
+        text_size: self.size
+
+
 <LibraryScreen>:
     name: "library"
 
     BoxLayout:
         orientation: "vertical"
+        canvas.before:
+            Color:
+                rgba: COLORS["bg"]
+            Rectangle:
+                pos: self.pos
+                size: self.size
 
         # --- Barre supérieure ---
         BoxLayout:
             size_hint_y: None
             height: dp(56)
-            padding: dp(12), dp(6)
+            padding: dp(14), dp(6)
             spacing: dp(10)
             canvas.before:
                 Color:
-                    rgba: COLORS["surface"]
+                    rgba: COLORS["header"]
                 Rectangle:
                     pos: self.pos
                     size: self.size
@@ -23,8 +64,8 @@
             Label:
                 text: "Parallel Space"
                 bold: True
-                font_size: "18sp"
-                color: COLORS["text"]
+                font_size: "19sp"
+                color: COLORS["text_on_header"]
                 halign: "left"
                 valign: "middle"
                 text_size: self.size
@@ -32,10 +73,11 @@
             Button:
                 text: "+ Importer un APK"
                 size_hint_x: None
-                width: dp(180)
+                width: dp(170)
                 background_normal: ""
                 background_color: COLORS["accent"]
-                color: COLORS["text"]
+                color: (1, 1, 1, 1)
+                font_size: "12sp"
                 on_release: root.import_apk()
 
         # --- Grille des applications ---
@@ -44,17 +86,10 @@
 
             GridLayout:
                 id: apps_grid
-                cols: 2
-                spacing: dp(12)
-                padding: dp(12)
+                cols: 3
+                spacing: dp(6)
+                padding: dp(14)
                 size_hint_y: None
                 height: self.minimum_height
-                row_default_height: dp(190)
+                row_default_height: dp(96)
                 row_force_default: True
-
-                canvas.before:
-                    Color:
-                        rgba: COLORS["bg"]
-                    Rectangle:
-                        pos: self.pos
-                        size: self.size

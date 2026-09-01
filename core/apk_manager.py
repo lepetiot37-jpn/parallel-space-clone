@@ -228,6 +228,71 @@ class ApkManager:
             return False
 
     # ------------------------------------------------------------------
+    # Liste des applications déjà installées (PackageManager, officiel)
+    # ------------------------------------------------------------------
+    def list_installed_apps(self, include_system=False):
+        """Retourne les applications lançables installées sur l'appareil,
+        sous la forme d'une liste de dicts {label, package_name, icon_path}.
+        Utilise exclusivement PackageManager (API publique), pas d'accès
+        au système de fichiers d'autres applications.
+        """
+        if platform != "android":
+            return []
+
+        try:
+            from jnius import autoclass
+
+            PythonActivity = autoclass("org.kivy.android.PythonActivity")
+            PackageManager = autoclass("android.content.pm.PackageManager")
+            Intent = autoclass("android.content.Intent")
+            activity = PythonActivity.mActivity
+            pm = activity.getPackageManager()
+            own_package = activity.getPackageName()
+
+            ApplicationInfoFlags = PackageManager.GET_META_DATA
+            installed = pm.getInstalledApplications(ApplicationInfoFlags)
+
+            results = []
+            count = installed.size()
+            for i in range(count):
+                app_info = installed.get(i)
+                package_name = str(app_info.packageName)
+                if package_name == own_package:
+                    continue
+
+                # Ne garder que les applis "lançables" (avec une icône dans
+                # le launcher), pour éviter de lister des services/libs
+                # système sans intérêt pour l'utilisateur.
+                launch_intent = pm.getLaunchIntentForPackage(package_name)
+                if launch_intent is None:
+                    continue
+
+                is_system = (app_info.flags & 1) != 0  # FLAG_SYSTEM
+                if is_system and not include_system:
+                    continue
+
+                label = str(pm.getApplicationLabel(app_info))
+                cached_icon = os.path.join(self.icons_dir, f"{package_name}.png")
+                if os.path.exists(cached_icon):
+                    icon_path = cached_icon
+                else:
+                    icon_path = self._extract_icon(pm, app_info, package_name)
+
+                results.append({
+                    "name": label,
+                    "package_name": package_name,
+                    "version_name": "",
+                    "icon_path": icon_path or "",
+                    "apk_path": None,
+                    "installed": True,
+                })
+
+            results.sort(key=lambda e: e["name"].lower())
+            return results
+        except Exception:
+            return []
+
+    # ------------------------------------------------------------------
     # État / ouverture d'une application déjà installée
     # ------------------------------------------------------------------
     def is_package_installed(self, package_name):
