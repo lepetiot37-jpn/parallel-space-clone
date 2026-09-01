@@ -128,27 +128,14 @@ class LibraryScreen(Screen):
         Clock.schedule_once(lambda *_: self.refresh_apps(), 0)
 
     def refresh_apps(self):
+        """N'affiche que les applications explicitement ajoutées par
+        l'utilisateur (via le sélecteur multi-apps ou l'import d'APK),
+        pas la totalité des applications installées sur l'appareil."""
         app = App.get_running_app()
-
-        # 1) Toutes les applications déjà installées sur l'appareil
-        #    (PackageManager), comme dans l'app Parallel Space originale.
-        by_package = {}
-        for entry in app.apk_manager.list_installed_apps():
-            by_package[entry["package_name"]] = entry
-
-        # 2) Les APK importés manuellement : s'ils sont déjà installés, on
-        #    garde le nom personnalisé éventuel (renommage) ; sinon on les
-        #    affiche avec le bouton "Installer".
-        for stored in app.storage.get_all():
-            pkg = stored["package_name"]
-            if pkg in by_package:
-                by_package[pkg]["name"] = stored.get("name") or by_package[pkg]["name"]
-                by_package[pkg]["apk_path"] = stored.get("apk_path")
-            else:
-                stored["installed"] = False
-                by_package[pkg] = stored
-
-        self.apps = sorted(by_package.values(), key=lambda e: e.get("name", "").lower())
+        entries = app.storage.get_all()
+        for entry in entries:
+            entry["installed"] = app.apk_manager.is_package_installed(entry["package_name"])
+        self.apps = sorted(entries, key=lambda e: e.get("name", "").lower())
 
     def on_apps(self, _instance, entries):
         """Reconstruit la grille à chaque mise à jour de la bibliothèque."""
@@ -165,10 +152,14 @@ class LibraryScreen(Screen):
                 installed=entry.get("installed", False),
             )
             grid.add_widget(card)
-        # Tuile finale "Ajouter une App", toujours en dernier dans la grille.
+        # Tuile finale "Ajouter une App" : ouvre l'écran de sélection
+        # multiple parmi les applications déjà installées.
         add_tile = AddAppCardWidget()
-        add_tile.bind(on_release=lambda *_a: self.import_apk())
+        add_tile.bind(on_release=lambda *_a: self.open_picker())
         grid.add_widget(add_tile)
+
+    def open_picker(self):
+        App.get_running_app().root.current = "picker"
 
     def open_options(self, package_name, current_name):
         """Popup officiel Kivy (pas Android) pour renommer / supprimer."""
@@ -263,6 +254,81 @@ class LibraryScreen(Screen):
         self.refresh_apps()
 
 
+class PickerCardWidget(ButtonBehavior, BoxLayout):
+    """Carte d'une app installée dans l'écran de sélection multiple,
+    avec une pastille de coche qui s'affiche/se cache selon l'état."""
+    app_name = StringProperty("")
+    package_name = StringProperty("")
+    icon_path = StringProperty("")
+    selected = BooleanProperty(False)
+
+    def on_release(self, *_args):
+        screen = App.get_running_app().root.get_screen("picker")
+        screen.toggle_selection(self.package_name)
+
+
+class PickerScreen(Screen):
+    apps = ListProperty([])
+    selected = ListProperty([])
+
+    def on_pre_enter(self, *_args):
+        self.selected = []
+        Clock.schedule_once(lambda *_: self.load_apps(), 0)
+
+    def load_apps(self):
+        app = App.get_running_app()
+        already_added = {e["package_name"] for e in app.storage.get_all()}
+        entries = [
+            e for e in app.apk_manager.list_installed_apps()
+            if e["package_name"] not in already_added
+        ]
+        self.apps = entries
+
+    def on_apps(self, _instance, entries):
+        grid = self.ids.get("picker_grid")
+        if grid is None:
+            return
+        grid.clear_widgets()
+        for entry in entries:
+            card = PickerCardWidget(
+                app_name=entry.get("name", ""),
+                package_name=entry.get("package_name", ""),
+                icon_path=entry.get("icon_path", ""),
+            )
+            grid.add_widget(card)
+
+    def toggle_selection(self, package_name):
+        if package_name in self.selected:
+            self.selected = [p for p in self.selected if p != package_name]
+        else:
+            self.selected = self.selected + [package_name]
+        grid = self.ids.get("picker_grid")
+        if grid:
+            for card in grid.children:
+                if isinstance(card, PickerCardWidget) and card.package_name == package_name:
+                    card.selected = package_name in self.selected
+
+    def confirm_selection(self):
+        app = App.get_running_app()
+        by_package = {e["package_name"]: e for e in self.apps}
+        for pkg in self.selected:
+            entry = by_package.get(pkg)
+            if not entry:
+                continue
+            app.storage.add_app(
+                name=entry.get("name", ""),
+                package_name=pkg,
+                version_name="",
+                apk_path=None,
+                icon_path=entry.get("icon_path", ""),
+            )
+        app.root.get_screen("library").refresh_apps()
+        app.root.current = "library"
+
+    def cancel(self):
+        App.get_running_app().root.current = "library"
+
+
 class ParallelSpaceApp(App):
     title = "Parallel Space Clone"
 
@@ -275,9 +341,11 @@ class ParallelSpaceApp(App):
 
         Builder.load_file(os.path.join(BASE_DIR, "ui", "appcard.kv"))
         Builder.load_file(os.path.join(BASE_DIR, "ui", "library.kv"))
+        Builder.load_file(os.path.join(BASE_DIR, "ui", "picker.kv"))
 
         sm = ScreenManager(transition=FadeTransition(duration=0.18))
         sm.add_widget(LibraryScreen(name="library"))
+        sm.add_widget(PickerScreen(name="picker"))
         return sm
 
     def on_start(self):

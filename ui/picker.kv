@@ -1,0 +1,135 @@
+#:import COLORS main.COLORS
+#:import dp kivy.metrics.dp
+
+<PickerCardWidget>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: dp(96)
+    padding: dp(6)
+    spacing: dp(4)
+
+    RelativeLayout:
+        size_hint_y: None
+        height: dp(56)
+
+        Image:
+            source: root.icon_path if root.icon_path else "assets/default_icon.png"
+            allow_stretch: True
+            keep_ratio: True
+            canvas.before:
+                Color:
+                    rgba: COLORS["surface_light"]
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [dp(14)]
+
+        BoxLayout:
+            size_hint: None, None
+            size: dp(20), dp(20)
+            pos_hint: {"right": 1, "top": 1}
+            canvas.before:
+                Color:
+                    rgba: COLORS["accent"] if root.selected else (0, 0, 0, 0.15)
+                Ellipse:
+                    pos: self.pos
+                    size: self.size
+            Label:
+                text: "\u2713" if root.selected else ""
+                color: (1, 1, 1, 1)
+                bold: True
+                font_size: "12sp"
+
+    Label:
+        text: root.app_name
+        color: COLORS["text"]
+        font_size: "12sp"
+        size_hint_y: None
+        height: dp(30)
+        shorten: True
+        shorten_from: "right"
+        halign: "center"
+        valign: "top"
+        text_size: self.size
+
+
+<PickerScreen>:
+    name: "picker"
+
+    FloatLayout:
+        canvas.before:
+            Color:
+                rgba: COLORS["bg"]
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        BoxLayout:
+            orientation: "vertical"
+            size_hint: 1, 1
+
+            BoxLayout:
+                size_hint_y: None
+                height: dp(56)
+                padding: dp(10), dp(6)
+                spacing: dp(10)
+                canvas.before:
+                    Color:
+                        rgba: COLORS["header"]
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
+
+                Button:
+                    text: "<"
+                    size_hint_x: None
+                    width: dp(40)
+                    background_normal: ""
+                    background_color: (0, 0, 0, 0)
+                    color: COLORS["text_on_header"]
+                    font_size: "20sp"
+                    on_release: root.cancel()
+
+                Label:
+                    text: "Ajouter des applications"
+                    bold: True
+                    font_size: "16sp"
+                    color: COLORS["text_on_header"]
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+            Label:
+                text: "Choisis les applications à ajouter à ton espace."
+                color: COLORS["text_dim"]
+                font_size: "12sp"
+                size_hint_y: None
+                height: dp(34)
+                padding: dp(14), 0
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
+
+            ScrollView:
+                do_scroll_x: False
+
+                GridLayout:
+                    id: picker_grid
+                    cols: 3
+                    spacing: dp(6)
+                    padding: dp(14), dp(4), dp(14), dp(80)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    row_default_height: dp(96)
+                    row_force_default: True
+
+        Button:
+            text: "Ajouter sur Parallel Space ({})".format(len(root.selected))
+            size_hint: None, None
+            size: dp(320), dp(48)
+            pos_hint: {"center_x": 0.5, "y": 0.03}
+            background_normal: ""
+            background_color: COLORS["accent"] if root.selected else COLORS["surface_light"]
+            color: (1, 1, 1, 1) if root.selected else COLORS["text_dim"]
+            disabled: not root.selected
+            on_release: root.confirm_selection()
