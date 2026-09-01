@@ -27,6 +27,7 @@ jobs:
         run: |
           rm -rf .buildozer/android/platform/build-*/build/venv
           rm -rf .buildozer/android/platform/android-sdk
+          find .buildozer -name state.db -delete
 
       - name: Compiler l'APK (debug) dans l'image Docker officielle Kivy
         run: |
